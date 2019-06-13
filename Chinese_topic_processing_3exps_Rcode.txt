@@ -1,0 +1,506 @@
+library(plyr)
+library(ggplot2)
+library(reshape2)
+library(scales) 
+library(MASS)
+library(lme4)
+library(car)
+library(languageR)
+
+## Experiment 1: simple TSV vs. SVO
+topic<-read.csv("topic1_32id.csv")
+boxcox(topic$RT~topic$condition) ##lamda peaks around -1, thus use rrt
+topic$rrt <- -1000/topic$RT
+topic.nosmall = subset(topic, topic$RT >50)
+nrow(topic.nosmall)
+topic.nobig = subset(topic, topic$RT < 5000)
+nrow(topic.nobig)  ## eliminated 11 datapoints
+topic = topic.nobig
+
+##statistical analyses by Word region (W)
+### at W5 (region =4 (MV vs. agent-NP)
+m.W5 <-lmer(rrt~condition + (1+condition||subj) + (1+condition||item), subset(topic, region =="4"))
+summary(m.W5)  ###SVO faster than topic, t=-2.186, p=0.037
+
+### at W6 (region=5, DCL vs. quantifier):
+m.W6 <-lmer(rrt~condition + (1+condition||subj) + (1+condition||item), subset(topic, region =="5"))
+summary(m.W6)
+
+### at W7 (region = 6, patient-NP vs. MV)
+m.W7 <-lmer(rrt~condition + (1+condition||subj) + (1+condition||item), subset(topic, region =="6"))
+summary(m.W7)  
+
+### at W8 (region=7, spillover1, e.g., but)
+m.W8 <-lmer(rrt~condition + (1+condition||subj) + (1+condition||item), subset(topic, region =="7"))
+summary(m.W8) 
+
+### at W9 (region=8, spillover2, e.g. bu yiding)
+m.W9 <-lmer(rrt~condition + (1+condition||subj) + (1+condition||item), subset(topic, region =="8"))
+summary(m.W9) 
+
+### W10 (region=9, spillover3)
+m.W10 <-lmer(rrt~condition + (1+condition||subj) + (1+condition||item), subset(topic, region =="9"))
+summary(m.W10)
+
+## statistical analyses by part of speech (POS)
+## POS = quantifier (d2, e.g. 'every')
+m.quantifier <-lmer(rrt~condition+ (1+condition||subj)+ (1+condition||item), subset(topic, position =="d2"))
+summary(m.quantifier)
+
+##  POS = agent-NP ('student')
+m.agent <-lmer(rrt~condition+ (1+condition||subj)+(1+condition||item), subset(topic, position =="na"))
+summary(m.agent)  
+
+## POS = patient-NP ('Tang-poem')
+m.patient <-lmer(rrt~condition + (1+condition||subj) + (1+condition||item), subset(topic, position =="np"))
+summary(m.patient) 
+
+##  POS = MV ('can-recite')
+m.MV <-lmer(rrt~condition+(1+condition||subj)+ (1+condition||item), subset(topic, position =="v"))
+summary(m.MV)    ### t=2.605, TSV faster than SVO
+
+## Experiment 2: 4 conditions, without contexts. 
+topic2 <- read.csv("Topic_noContext_72id_forR.csv")
+boxcox <- boxcox(topic2$RT~ topic2$condition * topic2$subj) ##lamda peaks around -1, thus use rrt
+topic2.nosmall = subset(topic2, topic2$RT >50) ## no RTs below 50ms
+topic2.nobig = subset(topic2, topic2$RT < 5000)  ##0.36%, 74 datapoints with RTs above 5000ms
+topic2 = topic2.nobig
+topic2$rrt <- -1000/topic2$RT
+
+RCV2 <- subset(topic2,constituent =="RC-V2") # RC-V2
+MCV2 <- subset(topic2,constituent =="Main-V2") # Main-V2
+DE <- subset(topic2,constituent =="DE")
+HN <- subset(topic2,constituent =="HN")
+
+##contrast coding
+order <- ifelse(topic2$condition%in%c("a","c"),-1,1)
+complexity <- ifelse(topic2$condition%in%c("a","b"),-1,1)
+orderxcomplexity <- ifelse(topic2$condition%in%c("b","c"),-1,1)
+
+topic2$order <- order
+topic2$complexity <- complexity
+topic2$orderxcomplexity <- orderxcomplexity
+
+## nested contrasts
+topic2$TSV_inMC <- ifelse(topic2$condition=="d",-1,
+                           ifelse(topic2$condition=="c",1,0)) # the baseline level"TSV.MC"is 1
+topic2$TSV_inRC <- ifelse(topic2$condition=="b",-1,
+                         ifelse(topic2$condition=="a",1,0))
+
+topic2$MC_inSVO <- ifelse(topic2$condition == "b",-1,
+                         ifelse(topic2$condition == "d",1,0))
+topic2$MC_inTSV <-ifelse(topic2$condition =="a",-1,
+                        ifelse(topic2$condition == "c",1,0))
+
+##analysese by Word positions
+### pos4 (RC-V2): W5
+m0.pos4.RCV2 <- lmer(rrt ~ order + complexity + orderxcomplexity 
+                      + (1 + order + complexity + orderxcomplexity||subj) 
+                      + (1 + order + complexity + orderxcomplexity||item), 
+                      subset(topic2,position =="4"))
+summary(m0.pos4.RCV2)
+
+m1.pos4.RCV2 <- lmer(rrt ~ order + complexity + orderxcomplexity 
+                      + (1 + complexity+ orderxcomplexity ||subj) 
+                      + (1 + order +complexity + orderxcomplexity||item), 
+                      subset(topic2,position =="4"))
+summary(m1.pos4.RCV2)
+
+
+### pos5.DE: W6
+m0.pos5.DE <- lmer(rrt ~ order + complexity + orderxcomplexity 
+                    + (1+ order + complexity + orderxcomplexity||subj) 
+                    + (1 + order + complexity + orderxcomplexity||item), 
+                    subset(topic2,position =="5"))
+summary(m0.pos5.DE)
+
+m1.pos5.DE <- lmer(rrt ~ order + complexity + orderxcomplexity 
+                    + (1+ order ||subj) 
+                    + (1 + orderxcomplexity||item), 
+                    subset(topic2,position =="5"))
+summary(m1.pos5.DE)
+
+
+### pos6.HN: W7
+m0.pos6.HN <- lmer(rrt ~ order + complexity + orderxcomplexity 
+                    + (1+ order + complexity + orderxcomplexity||subj) 
+                    + (1 + order + complexity + orderxcomplexity||item), 
+                    subset(topic2,position =="6"))
+summary(m0.pos6.HN)
+
+m1.pos6.HN <- lmer(rrt ~ order + complexity + orderxcomplexity 
+                   + (1+ order + complexity ||subj) 
+                   + (1 + order + orderxcomplexity||item), 
+                   subset(topic2,position =="6"))
+summary(m1.pos6.HN)
+
+#### pos7.ADV: W8
+m0.pos7.ADV <- lmer(rrt ~ order + complexity + orderxcomplexity 
+                     + (1+ order + complexity + orderxcomplexity||subj) 
+                     + (1 + order + complexity + orderxcomplexity||item), 
+                     subset(topic2,position =="7"))
+summary(m0.pos7.ADV)
+
+m1.pos7.ADV <- lmer(rrt ~ order + complexity + orderxcomplexity 
+                    + (1+ order ||subj) 
+                    + (1 + order + complexity + orderxcomplexity||item), 
+                    subset(topic2,position =="7"))
+summary(m1.pos7.ADV)
+
+####pos8.quantifier: W9
+m0.pos8.quantifier <- lmer(rrt ~ order + complexity + orderxcomplexity 
+                            + (1+ order + complexity + orderxcomplexity||subj) 
+                            + (1 + order + complexity + orderxcomplexity||item), 
+                            subset(topic2,position =="8"))
+summary(m0.pos8.quantifier)
+
+m0.pos8.quantifier <- lmer(rrt ~ order + complexity + orderxcomplexity 
+                           + (1+ order + complexity ||subj) 
+                           + (1 + complexity + orderxcomplexity||item), 
+                           subset(topic2,position =="8"))
+summary(m0.pos8.quantifier)
+
+###pos9: W10
+m0.pos9.MV1 <- lmer(rrt ~ order + complexity + orderxcomplexity 
+                     + (1+ order + complexity + orderxcomplexity||subj) 
+                     + (1 + order + complexity + orderxcomplexity||item), 
+                     subset(topic2,position =="9"))
+summary(m0.pos9.MV1)
+
+m1.pos9.MV1 <- lmer(rrt ~ order + complexity + orderxcomplexity 
+                    + (1+ order + complexity ||subj) 
+                    + (1 + order + complexity ||item), 
+                    subset(topic2,position =="9"))
+summary(m1.pos9.MV1)
+
+### check pos10: W11
+m0.pos10.MV1 <- lmer(rrt ~ order + complexity + orderxcomplexity 
+                     + (1+ order + complexity + orderxcomplexity||subj) 
+                     + (1 + order + complexity + orderxcomplexity||item), 
+                     subset(topic2,position =="10"))
+summary(m0.pos10.MV1)
+
+m1.pos10.MV1 <- lmer(rrt ~ order + complexity + orderxcomplexity 
+                     + (1+ order ||subj) 
+                     + (1 + complexity + orderxcomplexity||item), 
+                     subset(topic2,position =="10"))
+summary(m1.pos10.MV1)
+
+## Analyses by part of speech
+### RC-V2: ME of word order: SVO faster than TSV, t=-3.199
+m0.RCV2 <- lmer(rrt ~ order + complexity + orderxcomplexity 
+                + (1+ order + complexity + orderxcomplexity||subj) 
+                + (1 + order + complexity + orderxcomplexity||item), 
+                subset(topic2,constituent =="RC-V2"))
+summary(m0.RCV2)
+
+m1.RCV2 <- lmer(rrt ~ order + complexity + orderxcomplexity 
+                + (1+ order + orderxcomplexity||subj) 
+                + (1 + complexity ||item), 
+                subset(topic2,constituent =="RC-V2"))
+summary(m1.RCV2)
+
+## DE: ME of Word order, t=-5.44
+m0.DE <- lmer(rrt ~ order + complexity + orderxcomplexity 
+                + (1+ order + complexity + orderxcomplexity||subj) 
+                + (1 + order + complexity + orderxcomplexity||item), 
+                subset(topic2,constituent =="DE"))
+summary(m0.DE)
+
+m1.DE <- lmer(rrt ~ order + complexity + orderxcomplexity 
+              + (1+ order ||subj) 
+              + (1 + order + complexity + orderxcomplexity||item), 
+              subset(topic2,constituent =="DE"))
+summary(m1.DE)
+
+
+### HN: ME of word order, t=-6.93
+m0.HN <- lmer(rrt ~ order + complexity + orderxcomplexity 
+              + (1+ order + complexity + orderxcomplexity||subj) 
+              + (1 + order + complexity + orderxcomplexity||item), 
+              subset(topic2,constituent =="HN"))
+summary(m0.HN)
+
+m1.HN <- lmer(rrt ~ order + complexity + orderxcomplexity 
+              + (1+ order + complexity ||subj) 
+              + (1 + order + complexity ||item), 
+              subset(topic2,constituent =="HN"))
+summary(m1.HN)
+
+
+### ADV: ME of word order, t=-4.136
+m0.ADV <- lmer(rrt ~ order + complexity + orderxcomplexity 
+              + (1+ order + complexity + orderxcomplexity||subj) 
+              + (1 + order + complexity + orderxcomplexity||item), 
+              subset(topic2,constituent =="ADV"))
+summary(m0.ADV)
+
+m1.ADV <- lmer(rrt ~ order + complexity + orderxcomplexity 
+               + (1+ order + complexity ||subj) 
+               + (1 + order + complexity + orderxcomplexity||item), 
+               subset(topic2,constituent =="ADV"))
+summary(m1.ADV)
+
+
+### quantifier: ME of word order, t=-2.76
+m0.quantifier <- lmer(rrt ~ order + complexity + orderxcomplexity 
+               + (1+ order + complexity + orderxcomplexity||subj) 
+               + (1 + order + complexity + orderxcomplexity||item), 
+               subset(topic2,constituent =="quantifier"))
+summary(m0.quantifier)
+
+m1.quantifier <- lmer(rrt ~ order + complexity + orderxcomplexity 
+                      + (1+ order + complexity ||subj) 
+                      + (1 + order + complexity + orderxcomplexity||item), 
+                      subset(topic2,constituent =="quantifier"))
+summary(m1.quantifier)
+
+
+### main-V1  ## ME of order, ME of complexity, and interaction
+m0.MV1 <- lmer(rrt ~ order + complexity + orderxcomplexity 
+                      + (1+ order + complexity + orderxcomplexity||subj) 
+                      + (1 + order + complexity + orderxcomplexity||item), 
+                      subset(topic2,constituent =="main-V1"))
+summary(m0.MV1)
+
+m1.MV1 <- lmer(rrt ~ order + complexity + orderxcomplexity 
+               + (1+ complexity ||subj) 
+               + (1 + complexity ||item), 
+               subset(topic2,constituent =="main-V1"))
+summary(m1.MV1)
+
+
+### main-V2: ME of order, ME of complexity, interactions
+m0.MV2 <- lmer(rrt ~ order + complexity + orderxcomplexity 
+               + (1+ order + complexity + orderxcomplexity||subj) 
+               + (1 + order + complexity + orderxcomplexity||item), 
+               subset(topic2,constituent =="main-V2"))
+summary(m0.MV2)
+
+m1.MV2 <- lmer(rrt ~ order + complexity + orderxcomplexity 
+               + (1+ order + complexity + orderxcomplexity||subj) 
+               + (1 + order + complexity||item), 
+               subset(topic2,constituent =="main-V2"))
+summary(m0.MV2)
+
+
+##Experiment 3: 4 conditions  with discourse contexts (Regarding the analyses by word positions, the first word (W4) actually the 15th word in the stimuli.£©
+
+topic3 <- read.csv("exp3_context_60id.csv")
+boxcox <- boxcox(topic3$RT~ topic3$condition * topic3$subj) ##lamda peaks at -1, thus use rrt
+topic3.nosmall = subset(topic3, topic3$RT >50)  ## 17280, no RTs below 50ms
+topic3.nobig = subset(topic3, topic3$RT < 5000) ##0.82%, 142 datapoints eliminated
+topic3$rrt <- -1000/topic3$RT
+topic3 = topic3.nobig  
+
+order <- ifelse(topic3$condition%in%c("a","c"),-1,1)
+complexity <- ifelse(topic3$condition%in%c("a","b"),-1,1)
+orderxcomplexity <- ifelse(topic3$condition%in%c("b","c"),-1,1)
+
+topic3$order <- order
+topic3$complexity <- complexity
+topic3$orderxcomplexity <- orderxcomplexity
+
+
+topic3$TSV_inMC <- ifelse(topic3$condition=="d",-1,
+                          ifelse(topic3$condition=="c",1,0)) # the baseline level"TSV.MC"is 1
+topic3$TSV_inRC <- ifelse(topic3$condition=="b",-1,
+                          ifelse(topic3$condition=="a",1,0))
+
+topic3$MC_inSVO <- ifelse(topic3$condition == "b",-1,
+                          ifelse(topic3$condition == "d",1,0))
+topic3$MC_inTSV <-ifelse(topic3$condition =="a",-1,
+                         ifelse(topic3$condition == "c",1,0))
+
+### RC-V2: ME of word order: SVO faster than TSV, t=-5.364
+m0.RCV2 <- lmer(rrt ~ order + complexity + orderxcomplexity 
+                + (1+ order + complexity + orderxcomplexity||subj) 
+                + (1 + order + complexity + orderxcomplexity||item), 
+                subset(topic3,constituent =="RC-V2"))
+summary(m0.RCV2)
+
+m1.RCV2 <- lmer(rrt ~ order + complexity + orderxcomplexity 
+                + (1+ order + complexity + orderxcomplexity||subj) 
+                + (1 |item), 
+                subset(topic3,constituent =="RC-V2"))
+summary(m1.RCV2)
+
+### pos15 (RC-V2): W4
+m0.pos15.RCV2 <- lmer(rrt ~ order + complexity + orderxcomplexity 
+                + (1+ order + complexity + orderxcomplexity||subj) 
+                + (1 + order + complexity + orderxcomplexity||item), 
+                subset(topic3,position =="15"))
+summary(m0.pos15.RCV2)
+
+m1.pos15.RCV2 <- lmer(rrt ~ order + complexity + orderxcomplexity 
+                      + (1+ order + complexity + orderxcomplexity||subj) 
+                      + (1 + order + orderxcomplexity||item), 
+                      subset(topic3,position =="15"))
+summary(m1.pos15.RCV2)  ### ME of order: t=-4.83
+
+## DE: ME of Word order, t=-7.10
+m0.DE <- lmer(rrt ~ order + complexity + orderxcomplexity 
+              + (1+ order + complexity + orderxcomplexity||subj) 
+              + (1 + order + complexity + orderxcomplexity||item), 
+              subset(topic3,constituent =="DE"))
+summary(m0.DE)
+
+m1.DE <- lmer(rrt ~ order + complexity + orderxcomplexity 
+              + (1+ order ||subj) 
+              + (1 + order + complexity + orderxcomplexity||item), 
+              subset(topic3,constituent =="DE"))
+summary(m1.DE)
+
+m2.DE <- lmer(rrt ~ order + complexity + orderxcomplexity 
+              + (1+ order ||subj) 
+              + (1 + order + complexity||item), 
+              subset(topic3,constituent =="DE"))
+summary(m2.DE)
+
+### pos16 (DE): W5
+m0.pos16.DE <- lmer(rrt ~ order + complexity + orderxcomplexity 
+              + (1+ order + complexity + orderxcomplexity||subj) 
+              + (1 + order + complexity + orderxcomplexity||item), 
+              subset(topic3,position =="16"))
+summary(m0.pos16.DE)
+
+m1.pos16.DE <- lmer(rrt ~ order + complexity + orderxcomplexity 
+                    + (1+ order + complexity + orderxcomplexity||subj) 
+                    + (1 + order + complexity ||item), 
+                    subset(topic3,position =="16"))
+summary(m1.pos16.DE)
+
+m2.pos16.DE <- lmer(rrt ~ order + complexity + orderxcomplexity 
+                    + (1+ order + complexity ||subj) 
+                    + (1 + order + complexity ||item), 
+                    subset(topic3,position =="16"))
+summary(m2.pos16.DE) ### ME of word order, t=-6.70
+
+### HN: ME of word order, t=-6.42
+m0.HN <- lmer(rrt ~ order + complexity + orderxcomplexity 
+              + (1+ order + complexity + orderxcomplexity||subj) 
+              + (1 + order + complexity + orderxcomplexity||item), 
+              subset(topic3,constituent =="HN"))
+summary(m0.HN)
+
+m1.HN <- lmer(rrt ~ order + complexity + orderxcomplexity 
+              + (1+ order + complexity ||subj) 
+              + (1 + order + complexity ||item), 
+              subset(topic3,constituent =="HN"))
+summary(m1.HN)
+
+m2.HN <- lmer(rrt ~ order + complexity + orderxcomplexity 
+              + (1 + complexity ||subj) 
+              + (1 + order + complexity ||item), 
+              subset(topic3,constituent =="HN"))
+summary(m2.HN)
+
+### pos17.HN: W6
+m0.pos17.HN <- lmer(rrt ~ order + complexity + orderxcomplexity 
+              + (1+ order + complexity + orderxcomplexity||subj) 
+              + (1 + order + complexity + orderxcomplexity||item), 
+              subset(topic3,position =="17"))
+summary(m0.pos17.HN)
+
+m1.pos17.HN <- lmer(rrt ~ order + complexity + orderxcomplexity 
+              + (1+ complexity + orderxcomplexity||subj) 
+              + (1 + order + complexity ||item), 
+              subset(topic3, position =="17"))
+summary(m1.pos17.HN)  ### ME of word order: t=-7.65
+
+### ADV: ME of word order, t=-4.69
+m0.ADV <- lmer(rrt ~ order + complexity + orderxcomplexity 
+               + (1+ order + complexity + orderxcomplexity||subj) 
+               + (1 + order + complexity + orderxcomplexity||item), 
+               subset(topic3,constituent =="ADV"))
+summary(m0.ADV)
+
+m1.ADV <- lmer(rrt ~ order + complexity + orderxcomplexity 
+               + (1+ order + complexity + orderxcomplexity||subj) 
+               + (1 + order + complexity ||item), 
+               subset(topic3,constituent =="ADV"))
+summary(m1.ADV)
+
+#### pos18.ADV: W7
+m0.pos18.ADV <- lmer(rrt ~ order + complexity + orderxcomplexity 
+               + (1+ order + complexity + orderxcomplexity||subj) 
+               + (1 + order + complexity + orderxcomplexity||item), 
+               subset(topic3,position =="18"))
+summary(m0.pos18.ADV)
+
+m1.pos18.ADV <- lmer(rrt ~ order + complexity + orderxcomplexity 
+                     + (1+ order + complexity + orderxcomplexity||subj) 
+                     + (1 + order + complexity ||item), 
+                     subset(topic3,position =="18"))
+summary(m1.pos18.ADV)  ###ME of word order, t=-6.93
+
+### quantifier: ME of word order, t=-4.09
+m0.quantifier <- lmer(rrt ~ order + complexity + orderxcomplexity 
+                      + (1+ order + complexity + orderxcomplexity||subj) 
+                      + (1 + order + complexity + orderxcomplexity||item), 
+                      subset(topic3,constituent =="quantifier"))
+summary(m0.quantifier)
+
+m1.quantifier <- lmer(rrt ~ order + complexity + orderxcomplexity 
+                      + (1+  complexity + orderxcomplexity||subj) 
+                      + (1 + order + complexity + orderxcomplexity||item), 
+                      subset(topic3,constituent =="quantifier"))
+summary(m1.quantifier)
+
+######pos19.quantifier: W8
+m0.pos19.quantifier <- lmer(rrt ~ order + complexity + orderxcomplexity 
+                     + (1+ order + complexity + orderxcomplexity||subj) 
+                     + (1 + order + complexity + orderxcomplexity||item), 
+                     subset(topic3,position =="19"))
+summary(m0.pos19.quantifier)
+
+m1.pos19.quantifier <- lmer(rrt ~ order + complexity + orderxcomplexity 
+                            + (1+ complexity ||subj) 
+                            + (1 + complexity ||item), 
+                            subset(topic3,position =="19"))
+summary(m1.pos19.quantifier)  ### ME of word order, t=-3.14
+
+### main-V1  ## fail to converge?
+xtabs(~order+condition, subset(topic3, constituent == "main-V1"))
+xtabs(~complexity+condition, subset(topic3, constituent == "main-V1"))
+
+m0.MV1 <- lmer(rrt ~ order + complexity + orderxcomplexity 
+               + (1+ order + complexity + orderxcomplexity||subj) 
+               + (1 + order + complexity + orderxcomplexity||item), 
+               subset(topic3,constituent =="main-V1"))
+summary(m0.MV1)
+
+###pos20 (W9)
+m0.pos20.MV1 <- lmer(rrt ~ order + complexity + orderxcomplexity 
+               + (1+ order + complexity + orderxcomplexity||subj) 
+               + (1 + order + complexity + orderxcomplexity||item), 
+               subset(topic3,position =="20"))
+summary(m0.pos20.MV1)
+
+m1.pos20.MV1 <- lmer(rrt ~ order + complexity + orderxcomplexity 
+                     + (1+ order + complexity + orderxcomplexity||subj) 
+                     + (1 + complexity + orderxcomplexity||item), 
+                     subset(topic3,position =="20"))
+summary(m1.pos20.MV1)  ### pos20: interaction=3.32, unpack it
+
+
+
+### main-V2: fail to converge
+m0.MV2 <- lmer(rrt ~ order + complexity + orderxcomplexity 
+               + (1+ order + complexity + orderxcomplexity||subj) 
+               + (1 + order + complexity + orderxcomplexity||item), 
+               subset(topic3,constituent =="main-V2"))
+summary(m0.MV2)
+
+### pos21: W10
+m0.pos21.MV1 <- lmer(rrt ~ order + complexity + orderxcomplexity 
+                     + (1+ order + complexity + orderxcomplexity||subj) 
+                     + (1 + order + complexity + orderxcomplexity||item), 
+                     subset(topic3,position =="21"))
+summary(m0.pos21.MV1)
+
+m1.pos21.MV1 <- lmer(rrt ~ order + complexity + orderxcomplexity 
+                     + (1+ order + complexity + orderxcomplexity||subj) 
+                     + (1 + order + complexity ||item), 
+                     subset(topic3,position =="21"))
+summary(m1.pos21.MV1)  ### ME of order (t=-4.423), ME of complexity (t=-2.188)
