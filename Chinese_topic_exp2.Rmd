@@ -1,0 +1,321 @@
+---
+title: "Chinese_topic_Exp.2: Statistical Report"
+author: "Fuyun Wu "
+date: '`r Sys.Date()`'
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Chinese topic processing
+  - Mandarin: 71id
+
+## Load relevant packages
+```{r warning=FALSE}
+library(plyr)
+library(ggplot2)
+library(reshape2)
+library(scales) 
+library(MASS)
+library(lme4)
+library(car)
+library(languageR)
+```
+
+## Import dataset: exp2. without context
+```{r }
+topic2 <- read.csv("topic2_noContext_71id.csv")
+```
+
+```{r }
+topic2$subj <- as.factor(topic2$subj)
+topic2$item <- as.factor(topic2$item)
+```
+
+```{r }
+boxcox <- boxcox(topic2$RT~ topic2$condition * topic2$subj) 
+##lamda peaks around -1, thus use rrt
+
+topic2 <- subset(topic2, topic2$RT > 50 & topic2$ RT < 5000)
+## eliminated 74 (0.36%) datapoints
+
+topic2$rrt <- -1000/topic2$RT
+```
+
+## sum-contrast coding
+```{r }
+order <- ifelse(topic2$condition%in%c("a","c"),-1,1)
+complexity <- ifelse(topic2$condition%in%c("a","b"),-1,1)
+orderxcomplexity <- ifelse(topic2$condition%in%c("b","c"),-1,1)
+
+topic2$order <- order
+topic2$complexity <- complexity
+topic2$orderxcomplexity <- orderxcomplexity
+head(topic2, n=5)
+```
+
+### analyses by word positions
+## pos4 (RC-V2): W5
+```{r }
+m0.pos4.RCV2 <- lmer(rrt ~ order + complexity + orderxcomplexity 
+              + (1 + order + complexity + orderxcomplexity||subj) 
+              + (1 + order + complexity + orderxcomplexity||item), 
+              subset(topic2,position =="4"))
+summary(m0.pos4.RCV2)
+
+
+m1.pos4.RCV2 <- lmer(rrt ~ order + complexity + orderxcomplexity 
+               + (1 + complexity+ orderxcomplexity ||subj) 
+               + (1 + order +complexity + orderxcomplexity||item), 
+               subset(topic2,position =="4"))  ## optimal model
+summary(m1.pos4.RCV2)
+```
+
+### pos4.DE: W6
+```{r }
+m0.pos5.DE <- lmer(rrt ~ order + complexity + orderxcomplexity 
+          + (1+ order + complexity + orderxcomplexity||subj) 
+          + (1 + order + complexity + orderxcomplexity||item), 
+                   subset(topic2,position =="5"))
+summary(m0.pos5.DE)
+
+m1.pos5.DE <- lmer(rrt ~ order + complexity + orderxcomplexity 
+                   + (1+ order ||subj) 
+                   + (1 + orderxcomplexity||item), 
+                   subset(topic2,position =="5")) ## optimal model
+summary(m1.pos5.DE)
+```
+
+### pos6.HN: W7
+```{r }
+m0.pos6.HN <- lmer(rrt ~ order + complexity + orderxcomplexity 
+           + (1+ order + complexity + orderxcomplexity||subj) 
+           + (1 + order + complexity + orderxcomplexity||item), 
+          subset(topic2,position =="6"))
+summary(m0.pos6.HN)
+
+m1.pos6.HN <- lmer(rrt ~ order + complexity + orderxcomplexity 
+          + (1+ order + complexity ||subj) 
+          + (1 + order + orderxcomplexity||item), 
+          subset(topic2,position =="6"))  ##optimal model
+summary(m1.pos6.HN)
+```
+
+#### pos7.ADV:W8
+```{r }
+m0.pos7.ADV <- lmer(rrt ~ order + complexity + orderxcomplexity 
+            + (1+ order + complexity + orderxcomplexity||subj) 
+            + (1 + order + complexity + orderxcomplexity||item), 
+            subset(topic2,position =="7"))
+summary(m0.pos7.ADV)
+
+m1.pos7.ADV <- lmer(rrt ~ order + complexity + orderxcomplexity 
+           + (1+ order ||subj) 
+           + (1 + order + complexity + orderxcomplexity||item),
+           subset(topic2,position =="7")) ## optimal model
+summary(m1.pos7.ADV)
+```
+
+######pos8.quantifier: W9
+```{r }
+m0.pos8.quantifier <- lmer(rrt ~ order + complexity + orderxcomplexity 
+              + (1+ order + complexity + orderxcomplexity||subj) 
+              + (1 + order + complexity + orderxcomplexity||item), 
+             subset(topic2,position =="8"))
+summary(m0.pos8.quantifier)
+
+m0.pos8.quantifier <- lmer(rrt ~ order + complexity + orderxcomplexity 
+                 + (1+ order + complexity ||subj) 
+                 + (1 + complexity + orderxcomplexity||item), 
+                 subset(topic2,position =="8")) ## optimal model
+summary(m0.pos8.quantifier)
+```
+
+### pos9: W10
+```{r }
+m0.pos9.MV1 <- lmer(rrt ~ order + complexity + orderxcomplexity 
+           + (1+ order + complexity + orderxcomplexity||subj) 
+          + (1 + order + complexity + orderxcomplexity||item),  
+          subset(topic2,position =="9"))
+summary(m0.pos9.MV1)
+
+m1.pos9.MV1 <- lmer(rrt ~ order + complexity + orderxcomplexity 
+                    + (1+  complexity ||subj) 
+                    + (1 + complexity ||item), 
+                    subset(topic2,position =="9")) ## optimal model
+summary(m1.pos9.MV1)
+```
+
+### pos10: W11
+```{r }
+m0.pos10.MV1 <- lmer(rrt ~ order + complexity + orderxcomplexity 
+              + (1+ order + complexity + orderxcomplexity||subj) 
+             + (1 + order + complexity + orderxcomplexity||item), 
+             subset(topic2,position =="10"))
+summary(m0.pos10.MV1)
+
+m1.pos10.MV1 <- lmer(rrt ~ order + complexity + orderxcomplexity 
+                     + (1+ order ||subj) 
+                     + (1 + complexity + orderxcomplexity||item), 
+                     subset(topic2,position =="10")) ## optimal model
+summary(m1.pos10.MV1)
+```
+
+## analyses by part of speech 
+### RC-V2: 
+```{r }
+m0.RCV2 <- lmer(rrt ~ order + complexity + orderxcomplexity 
+                + (1+ order + complexity + orderxcomplexity||subj) 
+                + (1 + order + complexity + orderxcomplexity||item), 
+                subset(topic2,constituent =="RC-V2"))
+summary(m0.RCV2)
+
+m1.RCV2 <- lmer(rrt ~ order + complexity + orderxcomplexity 
+                + (1+ order + orderxcomplexity||subj) 
+                + (1 + complexity ||item), 
+                subset(topic2,constituent =="RC-V2")) ## optimal model
+summary(m1.RCV2)
+```
+
+## DE: 
+```{r }
+m0.DE <- lmer(rrt ~ order + complexity + orderxcomplexity 
+              + (1+ order + complexity + orderxcomplexity||subj) 
+              + (1 + order + complexity + orderxcomplexity||item), 
+              subset(topic2,constituent =="DE"))
+summary(m0.DE)
+
+m1.DE <- lmer(rrt ~ order + complexity + orderxcomplexity 
+              + (1+ order ||subj) 
+              + (1 + order + complexity + orderxcomplexity||item), 
+              subset(topic2,constituent =="DE")) ## optimal model
+summary(m1.DE)
+```
+
+### HN: 
+```{r }
+m0.HN <- lmer(rrt ~ order + complexity + orderxcomplexity 
+              + (1+ order + complexity + orderxcomplexity||subj) 
+              + (1 + order + complexity + orderxcomplexity||item), 
+              subset(topic2,constituent =="HN"))
+summary(m0.HN)
+
+m1.HN <- lmer(rrt ~ order + complexity + orderxcomplexity 
+              + (1+ order + complexity ||subj) 
+              + (1 + order + complexity + orderxcomplexity||item), 
+              subset(topic2,constituent =="HN"))
+summary(m1.HN)
+```
+
+### ADV: 
+```{r }
+m0.ADV <- lmer(rrt ~ order + complexity + orderxcomplexity 
+               + (1+ order + complexity + orderxcomplexity||subj) 
+               + (1 + order + complexity + orderxcomplexity||item), 
+               subset(topic2,constituent =="ADV"))
+summary(m0.ADV)
+
+m1.ADV <- lmer(rrt ~ order + complexity + orderxcomplexity 
+               + (1+ order + complexity ||subj) 
+               + (1 + order + complexity + orderxcomplexity||item), 
+               subset(topic2,constituent =="ADV")) ## optimal model
+summary(m1.ADV)
+```
+
+### quantifier: 
+```{r }
+m0.quantifier <- lmer(rrt ~ order + complexity + orderxcomplexity 
+               + (1+ order + complexity + orderxcomplexity||subj) 
+               + (1 + order + complexity + orderxcomplexity||item), 
+               subset(topic2,constituent =="quantifier"))
+summary(m0.quantifier)
+
+m1.quantifier <- lmer(rrt ~ order + complexity + orderxcomplexity 
+               + (1+ order + complexity ||subj) 
+               + (1 + order + complexity + orderxcomplexity||item), 
+              subset(topic2,constituent =="quantifier")) ## optimal model
+summary(m1.quantifier)
+```
+
+### main-V1  ## ME of order, ME of complexity, and interaction
+```{r }
+m0.MV1 <- lmer(rrt ~ order + complexity + orderxcomplexity 
+            + (1+ order + complexity + orderxcomplexity||subj) 
+           + (1 + order + complexity + orderxcomplexity||item), 
+           subset(topic2,constituent =="main-V1"))
+summary(m0.MV1)
+
+m1.MV1 <- lmer(rrt ~ order + complexity + orderxcomplexity 
+               + (1+ complexity ||subj) 
+               + (1 + complexity ||item), 
+               subset(topic2,constituent =="main-V1")) ## optimal model
+summary(m1.MV1)
+```
+
+### main-V2: ME of order, ME of complexity, interactions
+```{r }
+m0.MV2 <- lmer(rrt ~ order + complexity + orderxcomplexity 
+               + (1+ order + complexity + orderxcomplexity||subj) 
+               + (1 + order + complexity + orderxcomplexity||item), 
+               subset(topic2,constituent =="main-V2"))
+summary(m0.MV2)
+
+m1.MV2 <- lmer(rrt ~ order + complexity + orderxcomplexity 
+               + (1+ order + complexity + orderxcomplexity||subj) 
+               + (1 + order + complexity||item), 
+               subset(topic2,constituent =="main-V2")) ## optimal model
+summary(m0.MV2)
+```
+
+##Unpack the interactions at MV1 & MV2
+## nested contrast
+```{r }
+topic2$TSV_inMC <- ifelse(topic2$condition=="d",-1,
+                          ifelse(topic2$condition=="c",1,0)) 
+topic2$TSV_inRC <- ifelse(topic2$condition=="b",-1,
+                          ifelse(topic2$condition=="a",1,0))
+
+topic2$MC_inSVO <- ifelse(topic2$condition == "b",-1,
+                          ifelse(topic2$condition == "d",1,0))
+topic2$MC_inTSV <-ifelse(topic2$condition =="a",-1,
+                         ifelse(topic2$condition == "c",1,0))
+head(topic2, n=5)
+```
+
+##### nested comparision MV1:
+```{r }
+m0.MCV1.rrt.nested <-lmer(rrt ~ TSV_inMC + TSV_inRC + complexity 
+               + (1 + TSV_inMC + TSV_inRC + complexity||subj) 
+               + (1 + TSV_inMC + TSV_inRC + complexity||item),
+             subset(topic2,constituent =="main-V1"), REML = FALSE)
+
+summary(m0.MCV1.rrt.nested)  ###  t=4.33, TSV slower than SVO in MC
+
+
+m0.MCV1.rrt.nested.2<-lmer(rrt~ MC_inSVO + MC_inTSV + order
+              + (1 + MC_inSVO + MC_inTSV + order||subj) 
+             + (1 + MC_inSVO + MC_inTSV + order||item),
+          subset(topic2,constituent =="main-V1"), REML = FALSE)
+
+summary(m0.MCV1.rrt.nested.2) ##  t=-4.43, in SVO, MC faster than RC
+```
+
+# nested comparison # MCV2
+```{r }
+m0.MCV2.rrt.nested <-lmer(rrt ~ TSV_inMC + TSV_inRC + complexity 
+             + (1 + TSV_inMC + TSV_inRC + complexity||subj) 
+            + (1 + TSV_inMC + TSV_inRC + complexity||item),
+          subset(topic2,constituent =="main-V2"), REML = FALSE)
+
+summary(m0.MCV2.rrt.nested)  ###  t=12.99, TSV slower than SVO in MC
+
+
+m0.MCV2.rrt.nested.2<-lmer(rrt~ MC_inSVO + MC_inTSV + order
+         + (1 + MC_inSVO + MC_inTSV + order||subj) 
+         + (1 + MC_inSVO + MC_inTSV + order||item),
+         subset(topic2,constituent =="main-V2"), REML = FALSE)
+
+summary(m0.MCV2.rrt.nested.2) ##  t=-13.89, in SVO, MC faster than RC
+```

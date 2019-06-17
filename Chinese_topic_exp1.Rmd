@@ -1,0 +1,153 @@
+---
+title: "Chinese_topic_Exp.1: Statistical Report"
+author: "Fuyun WU "
+date: '`r Sys.Date()`'
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Chinese topic processing
+  - Mandarin: 32id
+
+## Load relevant packages
+```{r warning=FALSE}
+library(plyr)
+library(ggplot2)
+library(reshape2)
+library(scales) 
+library(MASS)
+library(lme4)
+library(car)
+library(languageR)
+```
+
+## Import dataset, and make variables as factors
+```{r }
+topic <- read.csv("topic1_32id.csv")
+```
+
+```{r }
+topic$subj <- as.factor(topic$subj)
+topic$item <- as.factor(topic$item)
+```
+
+```{r }
+boxcox(topic$RT~topic$condition) 
+##lamda peaks around -1, thus use rrt
+
+topic$rrt <- -1000/topic$RT
+topic <- subset(topic, topic$RT > 50 & topic$ RT < 5000)
+## eliminated 11 datapoints
+```
+
+##statistical analyses by Word region (W)
+### at W5 (region =4 (MV vs. agent-NP)
+```{r warning=FALSE} 
+m.W5 <-lmer(rrt~order + (1+order||subj) + (1+order||item), 
+            subset(topic, region =="4")) ## fail to converge
+m1.W5 <-lmer(rrt~order + (1+order||subj) + (1|item), 
+             subset(topic, region =="4")) ##fail to converge
+m2.W5 <-lmer(rrt~order + (1|subj) + (1|item), 
+             subset(topic, region =="4"))
+
+summary(m2.W5)   # t=2.694
+```
+
+### at W6 (region=5, DCL vs. quantifier):
+```{r warning=FALSE} 
+m.W6 <-lmer(rrt~order + (1+order||subj) + (1+order||item), 
+            subset(topic, region =="5"))##fail to converge
+m1.W6 <-lmer(rrt~order + (1+order||subj) + (1|item), 
+             subset(topic, region =="5")) ##fail to converge
+m2.W6 <-lmer(rrt~order + (1|subj) + (1|item),
+             subset(topic, region =="5"))## optimal model
+summary(m2.W6)
+```
+
+### at W7 (region = 6, patient-NP vs. MV)
+```{r warning=FALSE} 
+m.W7 <-lmer(rrt~order + (1+order||subj) + (1+order||item),
+            subset(topic, region =="6"))##fail to converge
+m1.W7 <-lmer(rrt~order + (1+order||subj) + (1|item),
+            subset(topic, region =="6"))##fail to converge
+m2.W7 <-lmer(rrt~order + (1|subj) + (1|item),
+             subset(topic, region =="6"))
+summary(m2.W7)  
+```
+
+### at W8 (region=7, spillover1, e.g., 'but')
+```{r warning=FALSE} 
+m.W8 <-lmer(rrt~order + (1+order||subj) + (1+order||item),
+            subset(topic, region =="7"))##fail to converge
+m1.W8 <-lmer(rrt~order + (1+order||subj) + (1|item),
+             subset(topic, region =="7"))
+summary(m1.W8) 
+```
+
+### at W9 (region=8, spillover2, e.g. bu yiding 'not')
+```{r warning=FALSE} 
+m.W9 <-lmer(rrt~order + (1+order||subj) + (1+order||item), 
+            subset(topic, region =="8"))##fail to converge
+m1.W9 <-lmer(rrt~order + (1+order||subj) + (1|item), 
+             subset(topic, region =="8"))##fail to converge
+m2.W9 <-lmer(rrt~order + (1|subj) + (1|item), 
+             subset(topic, region =="8")) 
+summary(m2.W9) 
+```
+
+### W10 (region=9, spillover3)
+```{r warning=FALSE} 
+m.W10 <-lmer(rrt~order + (1+order||subj) + (1+order||item), 
+             subset(topic, region =="9"))
+m1.W10 <-lmer(rrt~order + (1+order||subj) + (1|item), 
+              subset(topic, region =="9"))
+m2.W10 <-lmer(rrt~order + (1|subj) + (1|item), 
+              subset(topic, region =="9"))## optimal model
+summary(m2.W10)
+```
+
+## statistical analyses by part of speech (POS)
+##  POS = quantifier (d2, e.g. 'every')
+```{r warning=FALSE} 
+m.quantifier <-lmer(rrt~order+(1+order||subj)+(1+order||item),
+                    subset(topic, position =="d2"))
+m1.quantifier <-lmer(rrt~order+(1+order||subj)+(1|item),
+                     subset(topic, position =="d2"))## optimal model
+summary(m1.quantifier)
+```
+
+##  POS = agent-NP ('student')
+```{r warning=FALSE} 
+m.agent <-lmer(rrt~order+(1+order||subj)+(1+order||item),
+               subset(topic, position =="na"))
+m1.agent <-lmer(rrt~order+(1+order||subj)+(1|item),
+                subset(topic, position =="na"))
+m2.agent <-lmer(rrt~order+(1|subj)+(1|item),
+                subset(topic, position =="na"))## optimal model
+summary(m2.agent)  
+```
+
+## POS = patient-NP ('Tang-poem')
+```{r warning=FALSE} 
+m.patient <-lmer(rrt~order + (1+order||subj) + (1+order||item), 
+                 subset(topic, position =="np"))
+m1.patient <-lmer(rrt~order + (1+order||subj) + (1|item), 
+                  subset(topic, position =="np"))
+m2.patient <-lmer(rrt~order + (1|subj) + (1|item), 
+                  subset(topic, position =="np"))## optimal model
+summary(m2.patient) 
+```
+
+## POS = MV ('can-recite')
+```{r warning=FALSE} 
+m.MV <-lmer(rrt~order+(1+order||subj)+(1+order||item),
+            subset(topic, position =="v"))
+m1.MV <-lmer(rrt~order+(1+order||subj)+(1|item),
+             subset(topic, position =="v"))
+m2.MV <-lmer(rrt~order+(1|subj)+(1|item),
+             subset(topic, position =="v"))## optimal model
+summary(m2.MV)    
+```
